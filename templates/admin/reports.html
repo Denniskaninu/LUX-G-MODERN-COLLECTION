@@ -1,0 +1,214 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Reports - Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold">Sales Reports</h1>
+    <a href="{{ url_for('reports.export_csv', period=period, from_date=from_date, to_date=to_date) }}" 
+       class="btn btn-success">
+        <i class="fas fa-download me-2"></i>Export CSV
+    </a>
+</div>
+
+<!-- Period Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Period</label>
+                <select name="period" class="form-select" id="periodSelect">
+                    <option value="week" {{ 'selected' if period == 'week' }}>This Week</option>
+                    <option value="month" {{ 'selected' if period == 'month' }}>This Month</option>
+                    <option value="year" {{ 'selected' if period == 'year' }}>This Year</option>
+                    <option value="custom" {{ 'selected' if period == 'custom' }}>Custom Range</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3" id="fromDateGroup" style="{{ 'display: none;' if period != 'custom' }}">
+                <label class="form-label">From Date</label>
+                <input type="date" name="from_date" class="form-control" value="{{ from_date }}">
+            </div>
+            
+            <div class="col-md-3" id="toDateGroup" style="{{ 'display: none;' if period != 'custom' }}">
+                <label class="form-label">To Date</label>
+                <input type="date" name="to_date" class="form-control" value="{{ to_date }}">
+            </div>
+            
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Update Report
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4 class="fw-bold">KSh {{ "{:,.0f}".format(total_revenue) }}</h4>
+                <p class="mb-0">Total Revenue</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h4 class="fw-bold">KSh {{ "{:,.0f}".format(total_cogs) }}</h4>
+                <p class="mb-0">Total COGS</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4 class="fw-bold">KSh {{ "{:,.0f}".format(total_profit) }}</h4>
+                <p class="mb-0">Net Profit</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h4 class="fw-bold">{{ total_units }}</h4>
+                <p class="mb-0">Items Sold</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart -->
+{% if daily_sales %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Revenue & Profit Trend</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="salesChart" style="max-height: 400px;"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- Sales Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Sales Details - {{ title }}</h5>
+    </div>
+    <div class="card-body">
+        {% if sales %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Qty</th>
+                            <th>BP</th>
+                            <th>SP</th>
+                            <th>Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td>{{ sale.sold_at.strftime('%m/%d %H:%M') }}</td>
+                            <td>
+                                <strong>{{ sale.product.name }}</strong>
+                                {% if sale.product.brand %}
+                                    <br><small class="text-muted">{{ sale.product.brand }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ sale.product.category }}</span>
+                            </td>
+                            <td>{{ sale.quantity }}</td>
+                            <td>KSh {{ "{:,.0f}".format(sale.bp_at_sale) }}</td>
+                            <td>KSh {{ "{:,.0f}".format(sale.sp_at_sale) }}</td>
+                            <td class="fw-bold {{ 'text-success' if sale.profit > 0 else 'text-danger' }}">
+                                KSh {{ "{:,.0f}".format(sale.profit) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                <h4>No sales data</h4>
+                <p class="text-muted">No sales found for the selected period.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Show/hide custom date fields
+document.getElementById('periodSelect').addEventListener('change', function() {
+    const isCustom = this.value === 'custom';
+    document.getElementById('fromDateGroup').style.display = isCustom ? 'block' : 'none';
+    document.getElementById('toDateGroup').style.display = isCustom ? 'block' : 'none';
+});
+
+// Chart
+{% if daily_sales %}
+const dailySalesData = {{ daily_sales | tojson }};
+const dates = Object.keys(dailySalesData).sort();
+const revenues = dates.map(date => dailySalesData[date].revenue);
+const profits = dates.map(date => dailySalesData[date].profit);
+
+const ctx = document.getElementById('salesChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: dates,
+        datasets: [{
+            label: 'Revenue',
+            data: revenues,
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            tension: 0.1
+        }, {
+            label: 'Profit',
+            data: profits,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KSh ' + value.toLocaleString();
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': KSh ' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

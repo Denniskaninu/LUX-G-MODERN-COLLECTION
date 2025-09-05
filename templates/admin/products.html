@@ -1,0 +1,228 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Products - Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold">Products Management</h1>
+    <a href="{{ url_for('admin.upload_product') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Add Product
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="q" placeholder="Search products..." 
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-4">
+                <select name="category" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}" {{ 'selected' if current_category == category }}>
+                            {{ category }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Products Table -->
+{% if products %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 80px;">Image</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Stock</th>
+                        <th>BP</th>
+                        <th>SP</th>
+                        <th>Updated</th>
+                        <th style="width: 200px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>
+                            {% if product.image_path_web %}
+                                <img src="{{ url_for('public.serve_uploaded_file', filename=product.image_path_web) }}"                                     class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" 
+                                     style="width: 60px; height: 60px;">
+                                    <i class="fas fa-image text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>
+                                <strong>{{ product.name }}</strong>
+                                {% if product.brand %}
+                                    <br><small class="text-muted">{{ product.brand }}</small>
+                                {% endif %}
+                                {% if product.color or product.size %}
+                                    <br><small class="text-muted">
+                                        {% if product.color %}{{ product.color }}{% endif %}
+                                        {% if product.color and product.size %} • {% endif %}
+                                        {% if product.size %}{{ product.size }}{% endif %}
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ product.category }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {{ 'bg-danger' if product.quantity == 0 else 'bg-success' if product.quantity > 10 else 'bg-warning' }}">
+                                {{ product.quantity }}
+                            </span>
+                        </td>
+                        <td>KSh {{ "{:,.0f}".format(product.bp) }}</td>
+                        <td>KSh {{ "{:,.0f}".format(product.sp) }}</td>
+                        <td>{{ product.updated_at.strftime('%m/%d/%y') }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <!-- Sell Button -->
+                                {% if product.quantity > 0 %}
+                                    <button type="button" class="btn btn-success" 
+                                            data-bs-toggle="modal" data-bs-target="#sellModal{{ product.id }}">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                {% endif %}
+                                
+                                <!-- Restock Button -->
+                                <button type="button" class="btn btn-primary" 
+                                        data-bs-toggle="modal" data-bs-target="#restockModal{{ product.id }}">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                
+                                <!-- Delete Button -->
+                                <button type="button" class="btn btn-danger" 
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal{{ product.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Sell Modal -->
+                    {% if product.quantity > 0 %}
+                    <div class="modal fade" id="sellModal{{ product.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Sell: {{ product.name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('admin.sell_product', product_id=product.id) }}">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Selling Price (KSh)</label>
+                                            <input type="number" name="selling_price" class="form-control" 
+                                                   value="{{ product.sp }}" step="0.01" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Quantity (Max: {{ product.quantity }})</label>
+                                            <input type="number" name="quantity" class="form-control" 
+                                                   min="1" max="{{ product.quantity }}" value="1" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Sell Product</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Restock Modal -->
+                    <div class="modal fade" id="restockModal{{ product.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Restock: {{ product.name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="POST" action="{{ url_for('admin.restock_product', product_id=product.id) }}">
+                                    <div class="modal-body">
+                                        <p>Current stock: <strong>{{ product.quantity }}</strong></p>
+                                        <div class="mb-3">
+                                            <label class="form-label">Quantity to Add</label>
+                                            <input type="number" name="quantity" class="form-control" 
+                                                   min="1" value="1" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Add Stock</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Delete Modal -->
+                    <div class="modal fade" id="deleteModal{{ product.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Delete Product</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Are you sure you want to delete <strong>{{ product.name }}</strong>?</p>
+                                    <p class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        This action cannot be undone.
+                                    </p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form method="POST" action="{{ url_for('admin.delete_product', product_id=product.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger">Delete Product</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-box fa-3x text-muted mb-3"></i>
+            <h4>No products found</h4>
+            <p class="text-muted">
+                {% if search_query or current_category %}
+                    Try adjusting your search or filter.
+                {% else %}
+                    Start by adding your first product.
+                {% endif %}
+            </p>
+            {% if not search_query and not current_category %}
+                <a href="{{ url_for('admin.upload_product') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add First Product
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}WELCOME MACHAA - Admin{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>Add New Product
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <!-- Product Image -->
+                        <div class="col-md-12 mb-4">
+                            <label class="form-label fw-bold">Product Image</label>
+                            <div class="mb-2">
+                                {{ form.image(class="form-control", accept="image/*") }}
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-camera me-1"></i>
+                                Tap to take photo or choose from gallery. Max 8MB.
+                            </small>
+                            {% if form.image.errors %}
+                                {% for error in form.image.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Product Name -->
+                        <div class="col-md-12 mb-3">
+                            {{ form.name.label(class="form-label fw-bold") }}
+                            {{ form.name(class="form-control") }}
+                            {% if form.name.errors %}
+                                {% for error in form.name.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Category and Brand -->
+                        <div class="col-md-6 mb-3">
+                            {{ form.category.label(class="form-label fw-bold") }}
+                            {{ form.category(class="form-select") }}
+                            {% if form.category.errors %}
+                                {% for error in form.category.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.brand.label(class="form-label") }}
+                            {{ form.brand(class="form-control") }}
+                            {% if form.brand.errors %}
+                                {% for error in form.brand.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Color and Size -->
+                        <div class="col-md-6 mb-3">
+                            {{ form.color.label(class="form-label") }}
+                            {{ form.color(class="form-control") }}
+                            {% if form.color.errors %}
+                                {% for error in form.color.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.size.label(class="form-label") }}
+                            {{ form.size(class="form-control", placeholder="e.g., M, L, 42, 8") }}
+                            {% if form.size.errors %}
+                                {% for error in form.size.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- SKU -->
+                        <div class="col-md-12 mb-3">
+                            {{ form.sku.label(class="form-label") }}
+                            {{ form.sku(class="form-control", placeholder="Optional product code") }}
+                            {% if form.sku.errors %}
+                                {% for error in form.sku.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Pricing -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.bp.label(class="form-label fw-bold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">KSh</span>
+                                {{ form.bp(class="form-control") }}
+                            </div>
+                            {% if form.bp.errors %}
+                                {% for error in form.bp.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            {{ form.sp.label(class="form-label fw-bold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">KSh</span>
+                                {{ form.sp(class="form-control") }}
+                            </div>
+                            {% if form.sp.errors %}
+                                {% for error in form.sp.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            {{ form.quantity.label(class="form-label fw-bold") }}
+                            {{ form.quantity(class="form-control") }}
+                            {% if form.quantity.errors %}
+                                {% for error in form.quantity.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.products') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Products
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>Save Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Image preview functionality
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Create or update image preview
+            let preview = document.getElementById('image-preview');
+            if (!preview) {
+                preview = document.createElement('img');
+                preview.id = 'image-preview';
+                preview.className = 'img-thumbnail mt-2';
+                preview.style.maxWidth = '200px';
+                e.target.parentNode.appendChild(preview);
+            }
+            preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}
